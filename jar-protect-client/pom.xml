@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.jarprotect</groupId>
+        <artifactId>jar-protect</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>jar-protect-client</artifactId>
+    <packaging>jar</packaging>
+    <name>JAR Protect Client - 机器码获取工具（客户端）</name>
+    <description>独立的客户端工具，供客户获取本机机器码。无需其他依赖，双击即可运行。</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.jarprotect</groupId>
+            <artifactId>jar-protect-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.jarprotect.client.ClientMain</mainClass>
+                                </transformer>
+                            </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.jarprotect.client.ClientMain</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <!-- launch4j: 生成 Windows EXE -->
+            <plugin>
+                <groupId>com.akathist.maven.plugins.launch4j</groupId>
+                <artifactId>launch4j-maven-plugin</artifactId>
+                <version>2.5.2</version>
+                <executions>
+                    <execution>
+                        <id>wrap-exe</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>launch4j</goal>
+                        </goals>
+                        <configuration>
+                            <headerType>gui</headerType>
+                            <icon>${java.io.tmpdir}/launch4j-jarprotect/client.ico</icon>
+                            <outfile>${project.build.directory}/机器码获取工具.exe</outfile>
+                            <jar>${project.build.directory}/${project.build.finalName}.jar</jar>
+                            <errTitle>机器码获取工具</errTitle>
+                            <classPath>
+                                <mainClass>com.jarprotect.client.ClientMain</mainClass>
+                            </classPath>
+                            <jre>
+                                <path>runtime</path>
+                            </jre>
+                            <versionInfo>
+                                <fileVersion>1.0.0.0</fileVersion>
+                                <txtFileVersion>1.0.0</txtFileVersion>
+                                <fileDescription>机器码获取工具</fileDescription>
+                                <copyright>JAR-Protect</copyright>
+                                <productVersion>1.0.0.0</productVersion>
+                                <txtProductVersion>1.0.0</txtProductVersion>
+                                <productName>机器码获取工具</productName>
+                                <internalName>machinecode</internalName>
+                                <originalFilename>MachineCode.exe</originalFilename>
+                            </versionInfo>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- antrun: jlink 精简 JRE + 发行包 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <!-- prepare-package: 生成精简 JRE + 复制 ICO -->
+                    <execution>
+                        <id>create-runtime</id>
+                        <phase>prepare-package</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <delete dir="${project.build.directory}/runtime" quiet="true"/>
+                                <copy file="${project.basedir}/src/main/resources/app.ico"
+                                      tofile="${java.io.tmpdir}/launch4j-jarprotect/client.ico" overwrite="true"/>
+                                <exec executable="${java.home}/bin/jlink" failonerror="true">
+                                    <arg value="--module-path"/>
+                                    <arg value="${java.home}/jmods"/>
+                                    <arg value="--add-modules"/>
+                                    <arg value="java.base,java.desktop,java.logging,java.naming,java.management,java.xml,java.datatransfer,java.prefs"/>
+                                    <arg value="--output"/>
+                                    <arg value="${project.build.directory}/runtime"/>
+                                    <arg value="--no-header-files"/>
+                                    <arg value="--no-man-pages"/>
+                                    <arg value="--compress=2"/>
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <!-- package: 打包发行包 -->
+                    <execution>
+                        <id>create-dist</id>
+                        <phase>package</phase>
+                        <goals><goal>run</goal></goals>
+                        <configuration>
+                            <target>
+                                <!-- Windows 发行包 -->
+                                <zip destfile="${project.build.directory}/机器码获取工具-windows.zip">
+                                    <fileset dir="${project.build.directory}" includes="机器码获取工具.exe"/>
+                                    <zipfileset dir="${project.build.directory}/runtime" prefix="runtime"/>
+                                </zip>
+                                <!-- Linux 启动脚本 -->
+                                <echo file="${project.build.directory}/linux-dist/machinecode.sh"><![CDATA[#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+JAVA_CMD="java"
+if [ -n "$JAVA_HOME" ]; then
+    JAVA_CMD="$JAVA_HOME/bin/java"
+fi
+if ! command -v "$JAVA_CMD" &> /dev/null; then
+    echo "错误: 未找到 Java，请安装 JRE 1.8+ 或设置 JAVA_HOME"
+    exit 1
+fi
+exec "$JAVA_CMD" -jar "$SCRIPT_DIR/machinecode.jar" "$@"
+]]></echo>
+                                <copy file="${project.build.directory}/${project.build.finalName}.jar"
+                                      tofile="${project.build.directory}/linux-dist/machinecode.jar"/>
+                                <!-- Linux 发行包 -->
+                                <tar destfile="${project.build.directory}/机器码获取工具-linux.tar.gz" compression="gzip">
+                                    <tarfileset dir="${project.build.directory}/linux-dist" prefix="machinecode" filemode="755">
+                                        <include name="machinecode.sh"/>
+                                    </tarfileset>
+                                    <tarfileset dir="${project.build.directory}/linux-dist" prefix="machinecode">
+                                        <include name="machinecode.jar"/>
+                                    </tarfileset>
+                                </tar>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
