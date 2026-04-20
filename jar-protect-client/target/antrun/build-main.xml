@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="maven-antrun-" default="main">
+  <target name="main">
+    <zip destfile="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-client\target/机器码获取工具-windows.zip">
+      <fileset includes="机器码获取工具.exe" dir="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-client\target" />
+      <zipfileset prefix="runtime" dir="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-client\target/runtime" />
+    </zip>
+    <echo file="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-client\target/linux-dist/machinecode.sh">#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "$0")" &amp;&amp; pwd)"
+JAVA_CMD="java"
+if [ -n "$JAVA_HOME" ]; then
+    JAVA_CMD="$JAVA_HOME/bin/java"
+fi
+if ! command -v "$JAVA_CMD" &amp;> /dev/null; then
+    echo "错误: 未找到 Java，请安装 JRE 1.8+ 或设置 JAVA_HOME"
+    exit 1
+fi
+exec "$JAVA_CMD" -jar "$SCRIPT_DIR/machinecode.jar" "$@"</echo>
+    <copy file="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-client\target/jar-protect-client-1.0.0.jar" tofile="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-client\target/linux-dist/machinecode.jar" />
+    <tar destfile="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-client\target/机器码获取工具-linux.tar.gz" compression="gzip">
+      <tarfileset prefix="machinecode" filemode="755" dir="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-client\target/linux-dist">
+        <include name="machinecode.sh" />
+      </tarfileset>
+      <tarfileset prefix="machinecode" dir="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-client\target/linux-dist">
+        <include name="machinecode.jar" />
+      </tarfileset>
+    </tar>
+  </target>
+</project>

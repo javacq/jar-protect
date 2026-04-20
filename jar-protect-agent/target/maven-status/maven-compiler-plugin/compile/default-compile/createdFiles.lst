@@ -1,0 +1,8 @@
+com\jarprotect\agent\ProtectAgent.class
+com\jarprotect\agent\ProtectLauncher.class
+com\jarprotect\agent\DecryptTransformer$2$1.class
+com\jarprotect\agent\DecryptTransformer.class
+com\jarprotect\agent\DecryptTransformer$2.class
+com\jarprotect\agent\ResourceDecryptor.class
+com\jarprotect\agent\spring\ProtectEnvironmentPostProcessor.class
+com\jarprotect\agent\DecryptTransformer$1.class

@@ -143,18 +143,7 @@ public class LicenseGenerator {
             // 提取过期天数
             int days = ((code[0] & 0xFF) << 8) | (code[1] & 0xFF);
 
-            // 重新计算 HMAC
-            String key = resolveKey(secretKey);
-            byte[] hmacFull = computeHmac(machineCode, key, days);
-
-            // 比对 HMAC 部分（6 字节）
-            for (int i = 0; i < HMAC_BYTES; i++) {
-                if (code[EXPIRY_BYTES + i] != hmacFull[i]) {
-                    return LicenseResult.fail("注册码不匹配");
-                }
-            }
-
-            // 检查过期
+            // 优先检查过期（过期比不匹配更有意义，避免误导用户）
             if (days != PERMANENT_DAYS) {
                 Date expiryDate = daysToDate(days);
                 // 比较到天（忽略时分秒）
@@ -168,8 +157,23 @@ public class LicenseGenerator {
                     SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
                     return LicenseResult.fail("注册码已过期（过期日期: " + sdf.format(expiryDate) + "）");
                 }
+            }
+
+            // 重新计算 HMAC
+            String key = resolveKey(secretKey);
+            byte[] hmacFull = computeHmac(machineCode, key, days);
+
+            // 比对 HMAC 部分（6 字节）
+            for (int i = 0; i < HMAC_BYTES; i++) {
+                if (code[EXPIRY_BYTES + i] != hmacFull[i]) {
+                    return LicenseResult.fail("注册码不匹配");
+                }
+            }
+
+            // 返回验证成功
+            if (days != PERMANENT_DAYS) {
                 SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT);
-                return LicenseResult.success("注册码验证通过（有效期至 " + sdf.format(expiryDate) + "）");
+                return LicenseResult.success("注册码验证通过（有效期至 " + sdf.format(daysToDate(days)) + "）");
             }
 
             return LicenseResult.success("注册码验证通过（永久有效）");

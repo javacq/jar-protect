@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="maven-antrun-" default="main">
+  <target name="main">
+    <copy flatten="true" todir="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-cli\target">
+      <fileset excludes="*original*" includes="jar-protect-agent-*.jar" dir="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-cli/../jar-protect-agent/target" />
+    </copy>
+    <zip destfile="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-cli\target/JAR-Protect-windows.zip">
+      <fileset includes="JAR-Protect.exe" dir="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-cli\target" />
+      <fileset includes="jar-protect-agent-*.jar" dir="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-cli\target" />
+      <zipfileset prefix="runtime" dir="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-cli\target/runtime" />
+    </zip>
+    <echo file="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-cli\target/linux-dist/jarprotect.sh">#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "$0")" &amp;&amp; pwd)"
+JAVA_CMD="java"
+if [ -n "$JAVA_HOME" ]; then
+    JAVA_CMD="$JAVA_HOME/bin/java"
+fi
+if ! command -v "$JAVA_CMD" &amp;> /dev/null; then
+    echo "错误: 未找到 Java，请安装 JRE 1.8+ 或设置 JAVA_HOME"
+    exit 1
+fi
+exec "$JAVA_CMD" -jar "$SCRIPT_DIR/jar-protect-cli.jar" gui "$@"</echo>
+    <copy file="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-cli\target/jar-protect-cli-1.0.0.jar" tofile="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-cli\target/linux-dist/jar-protect-cli.jar" />
+    <copy flatten="true" todir="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-cli\target/linux-dist">
+      <fileset excludes="*original*" includes="jar-protect-agent-*.jar" dir="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-cli/../jar-protect-agent/target" />
+    </copy>
+    <tar destfile="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-cli\target/JAR-Protect-linux.tar.gz" compression="gzip">
+      <tarfileset prefix="jarprotect" filemode="755" dir="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-cli\target/linux-dist">
+        <include name="jarprotect.sh" />
+      </tarfileset>
+      <tarfileset prefix="jarprotect" dir="C:\Users\JavaCq\Desktop\jar-protect\jar-protect-cli\target/linux-dist">
+        <include name="jar-protect-cli.jar" />
+        <include name="jar-protect-agent-*.jar" />
+      </tarfileset>
+    </tar>
+  </target>
+</project>

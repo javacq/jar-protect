@@ -1,0 +1,14 @@
+com\jarprotect\core\bytecode\ClassProcessor.class
+com\jarprotect\core\jar\JarDecryptor.class
+com\jarprotect\core\machine\MachineCodeGenerator.class
+com\jarprotect\core\bytecode\ClassProcessor$MethodBodyReplacer.class
+com\jarprotect\core\license\LicenseGenerator.class
+com\jarprotect\core\license\LicenseGenerator$LicenseResult.class
+com\jarprotect\core\jar\JarEncryptor.class
+com\jarprotect\core\model\EncryptConfig.class
+com\jarprotect\core\bytecode\ClassProcessor$MethodBodyEraserVisitor.class
+com\jarprotect\core\crypto\AESCrypto.class
+com\jarprotect\core\crypto\RSACrypto.class
+com\jarprotect\core\machine\HardwareCollector.class
+com\jarprotect\core\model\ProtectManifest.class
+com\jarprotect\core\crypto\CryptoUtils.class

@@ -321,10 +321,34 @@ public class ProtectLauncher {
         String currentHash = CryptoUtils.bytesToHex(CryptoUtils.sha256(currentCode));
 
         if (!expectedHash.equalsIgnoreCase(currentHash)) {
+            // 检查是否存在注册码且已过期，优先提示过期信息
+            String licenseCode = readLicenseFile();
+            String licenseExpiry = (licenseCode != null && !licenseCode.isEmpty())
+                    ? LicenseGenerator.extractExpiry(licenseCode) : null;
+            boolean licenseExpired = false;
+            if (licenseExpiry != null && !LicenseGenerator.PERMANENT.equals(licenseExpiry)) {
+                try {
+                    java.util.Date expiryDate = new java.text.SimpleDateFormat(LicenseGenerator.DATE_FORMAT).parse(licenseExpiry);
+                    java.util.Calendar today = java.util.Calendar.getInstance();
+                    today.set(java.util.Calendar.HOUR_OF_DAY, 0);
+                    today.set(java.util.Calendar.MINUTE, 0);
+                    today.set(java.util.Calendar.SECOND, 0);
+                    today.set(java.util.Calendar.MILLISECOND, 0);
+                    licenseExpired = expiryDate.before(today.getTime());
+                } catch (Exception ignored) {}
+            }
+
             System.err.println("[JAR-Protect] ================================================");
-            System.err.println("[JAR-Protect] 机器码验证失败！");
-            System.err.println("[JAR-Protect] 当前机器码: " + MachineCodeGenerator.generate());
-            System.err.println("[JAR-Protect] 此应用未授权在当前设备上运行。");
+            if (licenseExpired) {
+                System.err.println("[JAR-Protect] 注册码已过期！");
+                System.err.println("[JAR-Protect] 过期日期: " + licenseExpiry);
+                System.err.println("[JAR-Protect] 当前机器码: " + MachineCodeGenerator.generate());
+                System.err.println("[JAR-Protect] 请联系供应商获取新的注册码。");
+            } else {
+                System.err.println("[JAR-Protect] 机器码验证失败！");
+                System.err.println("[JAR-Protect] 当前机器码: " + MachineCodeGenerator.generate());
+                System.err.println("[JAR-Protect] 此应用未授权在当前设备上运行。");
+            }
             System.err.println("[JAR-Protect] ================================================");
             System.exit(2);
         }

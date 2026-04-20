@@ -17,7 +17,7 @@
 - **机器码绑定** — 基于 MAC/CPU/主板/硬盘序列号的硬件指纹，支持 Windows/Linux/macOS
 - **注册码授权** — 支持两种模式：
   - **HMAC 模式** — HMAC-SHA256 短码（XXXX-XXXX-XXXX-XXXX），传统密钥模式
-  - **RSA 签名模式** — RSA 私钥签名，JAR 内嵌公钥验证，无法伪造注册码
+  - **RSA 签名模式** — RSA 私钥推导 HMAC 密钥，只有持有私钥才能生成/验证注册码
 - **自动嵌入引擎** — 加密时自动将解密 Agent 嵌入 JAR，直接 `java -jar` 运行
 - **License 文件验证** — 客户只需在 JAR 同目录放置 `license.lic` 文本文件
 - **GUI 管理工具** — Midnight Forge 深色主题，支持加密、解密、RSA 密钥、机器码、注册码全流程操作
@@ -94,8 +94,7 @@ java -jar jar-protect-cli-1.0.0.jar encrypt \
   -p com.example.** \
   --password mySecret \
   --agent-jar jar-protect-agent-1.0.0.jar \
-  --license-required \
-  --license-expiry 2026-12-31
+  --license-required
 ```
 
 #### 第三步：客户 — 获取机器码
@@ -137,14 +136,12 @@ java -jar jar-protect-cli-1.0.0.jar encrypt \
   -p com.example.** \
   --password mySecret \
   --agent-jar jar-protect-agent-1.0.0.jar \
-  --license-required \
-  --license-expiry 2026-12-31
+  --license-required
 ```
 
 参数说明：
 - `--agent-jar` — 自动嵌入解密引擎到输出 JAR 中
 - `--license-required` — 启用注册码验证
-- `--license-expiry` — 注册码过期日期（`PERMANENT` 表示永久，默认永久）
 
 #### 生成 HMAC 注册码
 
@@ -157,7 +154,7 @@ java -jar jar-protect-cli-1.0.0.jar license \
 # 输出: 注册码: F9E8-D7C6-B5A4-3210
 ```
 
-> **注意：** `--expiry` 必须与加密时的 `--license-expiry` 一致，否则注册码无法匹配。
+> **说明：** 过期时间编码在注册码内部（前 2 字节），验证时自动从注册码中提取，无需额外配置。
 
 #### 客户运行
 
@@ -207,7 +204,6 @@ java -jar jar-protect-cli-1.0.0.jar encrypt [选项]
 | `--agent-jar` | Agent JAR 路径（自动嵌入解密引擎） |
 | `--license-required` | 启用注册码验证 |
 | `--license-key` | 自定义验证密钥（可选） |
-| `--license-expiry` | 过期时间（`yyyy-MM-dd` 或 `PERMANENT`） |
 
 ### license — 注册码管理
 
@@ -221,10 +217,10 @@ java -jar jar-protect-cli-1.0.0.jar license \
   --generate -m A1B2-C3D4-E5F6-7890 --password mySecret \
   --expiry 2026-12-31
 
-# 验证注册码
+# 验证注册码（过期时间自动从注册码中提取）
 java -jar jar-protect-cli-1.0.0.jar license \
   --verify -l F9E8-D7C6-B5A4-3210 -m A1B2-C3D4-E5F6-7890 \
-  --password mySecret --expiry 2026-12-31
+  --password mySecret
 ```
 
 | 选项 | 说明 |
@@ -234,7 +230,7 @@ java -jar jar-protect-cli-1.0.0.jar license \
 | `-m, --machine-code` | 目标机器码（不指定则使用当前机器） |
 | `-l, --license` | 注册码（验证时使用） |
 | `--password` | 密钥 |
-| `--expiry` | 过期时间（`yyyy-MM-dd` 或 `PERMANENT`，默认永久） |
+| `--expiry` | 过期时间，仅生成时使用（`yyyy-MM-dd` 或 `PERMANENT`，默认永久） |
 
 ### machinecode — 机器码
 
@@ -296,15 +292,24 @@ java -javaagent:jar-protect-agent-1.0.0.jar -jar app-encrypted.jar
 
 ### 注册码算法
 
+注册码格式：`XXXX-XXXX-XXXX-XXXX`（8 字节 = 16 个十六进制字符）
+
+```
+字节布局：[0..1] 过期天数（2 字节，自 2000-01-01 起的天数，0 = 永久）
+          [2..7] HMAC-SHA256 截取前 6 字节
+```
+
 **HMAC 模式：**
 ```
-注册码 = HMAC-SHA256(机器码 + "|" + 过期时间, 密钥) → 取前 8 字节 → XXXX-XXXX-XXXX-XXXX
+HMAC 部分 = HMAC-SHA256(机器码 + "|" + 过期天数, 密钥) → 截取前 6 字节
+注册码 = [2 字节过期天数] + [6 字节 HMAC] → XXXX-XXXX-XXXX-XXXX
 ```
 
 **RSA 模式：**
 ```
 hmacKey = SHA256(privateKey.encoded)
-注册码 = HMAC-SHA256(机器码 + "|" + 过期天数, hmacKey) → 取前 8 字节 → XXXX-XXXX-XXXX-XXXX
+HMAC 部分 = HMAC-SHA256(机器码 + "|" + 过期天数, hmacKey) → 截取前 6 字节
+注册码 = [2 字节过期天数] + [6 字节 HMAC] → XXXX-XXXX-XXXX-XXXX
 ```
 
 - 过期时间参与 HMAC 计算，**篡改日期会导致注册码不匹配**
@@ -330,7 +335,7 @@ hmacKey = SHA256(privateKey.encoded)
 | 机器码哈希 | SHA-256 |
 | 注册码 | HMAC-SHA256（RSA 模式用私钥推导 HMAC 密钥） |
 | 密码存储 | 纯 AES: XOR 混淆；AES+RSA: RSA 加密 |
-| 过期时间 | 内嵌于加密 JAR manifest / 注册码签名，不可篡改 |
+| 过期时间 | 编码在注册码内部（前 2 字节），参与 HMAC 签名，篡改日期会导致 HMAC 不匹配 |
 | 内存安全 | 解密字节码仅存在于 JVM 内存，磁盘无明文 |
 
 ## 兼容性
@@ -348,8 +353,8 @@ hmacKey = SHA256(privateKey.encoded)
 1. **私钥安全** — RSA 私钥是最高机密，泄露等于丧失全部保护，勿上传公共仓库
 2. **备份原始 JAR** — 加密不可逆（不含原始字节码），请务必保留原始 JAR
 3. **机器码变更** — 更换硬件后机器码会变化，需重新生成注册码
-4. **过期时间一致性** — HMAC 模式下，加密时的 `--license-expiry` 必须与生成注册码时的 `--expiry` 一致
+4. **过期时间** — 过期时间编码在注册码内部（前 2 字节），生成注册码时通过 `--expiry` 指定，加密 JAR 时无需设置过期时间
 5. **性能影响** — 解密仅在类首次加载时执行一次，运行时性能影响可忽略
 6. **调试模式** — 加密后的 JAR 无法正常调试（方法体已擦除），调试请使用原始 JAR
 7. **AES+RSA 运行** — 客户运行加密 JAR 时需将 `private.pem` 放在 JAR 同目录
-8. **License 文件** — 纯文本，仅一行注册码，HMAC 模式不含过期时间（已内嵌于加密包中）
+8. **License 文件** — 纯文本，仅一行注册码，过期时间已编码在注册码内部，无需额外配置
